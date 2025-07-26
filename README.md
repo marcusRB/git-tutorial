@@ -538,3 +538,314 @@ git push --force-with-lease    # Push rebased branch safely
 
 ---
 
+***
+
+Absolutely! Let’s explore **common and tricky Git issues** with **practical examples**, **why they happen**, and **how to fix them** — using new branches when relevant.
+
+---
+
+# 🧨 Common Git Problems & Fixes — With Examples
+
+Each issue below includes:
+
+* What caused it
+* How to reproduce it using branches
+* Step-by-step resolution
+* When to use it (safely)
+
+---
+
+## ⚠️ 1. **Fast-Forward vs Non-Fast-Forward Push**
+
+### 🧠 What is it?
+
+When your branch is **behind** the remote, Git may **refuse to push** unless the histories match. This protects you from overwriting others’ work.
+
+---
+
+### 🧪 Reproduce the Issue
+
+#### Developer A:
+
+```bash
+git checkout -b feature-x
+echo "line from Dev A" > file.txt
+git commit -am "Dev A change"
+git push origin feature-x
+```
+
+#### Developer B (you):
+
+```bash
+git checkout -b feature-x origin/feature-x
+echo "line from Dev B" >> file.txt
+git commit -am "Dev B change"
+git push origin feature-x  # 🚨 ERROR!
+```
+
+### ❌ Error:
+
+```
+! [rejected] feature-x -> feature-x (non-fast-forward)
+```
+
+---
+
+### ✅ Fix: Use Rebase or Pull First
+
+```bash
+git pull --rebase origin feature-x
+# Resolve any conflicts if needed
+git push
+```
+
+If you've already rebased manually:
+
+```bash
+git push --force-with-lease
+```
+
+---
+
+## ⚠️ 2. **Uncommitted Changes Prevent Switching Branches**
+
+```bash
+git checkout main
+```
+
+🚨 Error:
+
+```
+error: Your local changes would be overwritten
+```
+
+---
+
+### ✅ Fix:
+
+You have 3 options:
+
+```bash
+git stash        # Temporarily save them
+git checkout main
+git stash pop    # Apply changes back
+```
+
+OR commit them:
+
+```bash
+git add .
+git commit -m "WIP: unfinished changes"
+git checkout main
+```
+
+OR discard them completely:
+
+```bash
+git reset --hard
+```
+
+---
+
+## ⚠️ 3. **Accidental Commits on the Wrong Branch**
+
+### 🧪 Example:
+
+You're on `main` but meant to work on `feature-x`:
+
+```bash
+echo "oops!" >> main.txt
+git add .
+git commit -m "Wrong commit!"
+```
+
+---
+
+### ✅ Fix: Move the commit to the correct branch
+
+```bash
+git branch feature-x      # Create a new branch from current state
+git reset --hard HEAD~1   # Remove the commit from main
+git checkout feature-x
+```
+
+✅ Now the commit is only on `feature-x`, not `main`.
+
+---
+
+## ⚠️ 4. **Undo a Commit (Soft, Mixed, Hard Reset)**
+
+| Reset Type | Keeps Files | Keeps Staging | Use Case                  |
+| ---------- | ----------- | ------------- | ------------------------- |
+| `--soft`   | ✅ Yes       | ✅ Yes         | Edit commit msg or squash |
+| `--mixed`  | ✅ Yes       | ❌ No          | Unstage files             |
+| `--hard`   | ❌ No        | ❌ No          | Dangerous! Wipe changes   |
+
+---
+
+### 🧪 Example
+
+```bash
+git commit -m "Oops bad commit"
+```
+
+### ✅ Fix:
+
+```bash
+git reset --soft HEAD~1       # Undo commit, keep changes staged
+git reset --mixed HEAD~1      # Undo commit, unstage changes
+git reset --hard HEAD~1       # ⚠️ Undo commit AND discard code
+```
+
+---
+
+## ⚠️ 5. **Detached HEAD**
+
+### 🧠 What is it?
+
+You checked out a **commit hash** or tag, not a branch. Now you're editing history that won't be saved.
+
+```bash
+git checkout <commit-sha>
+```
+
+🧭 You’ll see:
+
+```
+HEAD is now in detached state
+```
+
+---
+
+### ✅ Fix:
+
+```bash
+git checkout -b new-branch-from-detached
+```
+
+This creates a branch to keep your changes.
+
+---
+
+## ⚠️ 6. **Merge Conflict**
+
+Already covered above, but here's a quick reminder:
+
+### 🧪 Example:
+
+```bash
+# On main
+echo "hello" > conflict.txt
+git commit -am "main writes hello"
+
+# On feature
+git checkout -b feature-conflict
+echo "hi" > conflict.txt
+git commit -am "feature writes hi"
+
+git checkout main
+git merge feature-conflict   # ⚠️ Conflict
+```
+
+### ✅ Fix:
+
+1. Open `conflict.txt`
+2. Manually fix:
+
+```txt
+<<<<<<< HEAD
+hello
+=======
+hi
+>>>>>>> feature-conflict
+```
+
+3. Resolve:
+
+```bash
+git add conflict.txt
+git commit
+```
+
+---
+
+## ⚠️ 7. **Overwriting Local Changes After a Pull**
+
+Sometimes a `git pull` fails:
+
+```
+error: Your local changes to the following files would be overwritten
+```
+
+---
+
+### ✅ Fix:
+
+If you want to keep your changes:
+
+```bash
+git stash
+git pull
+git stash pop
+```
+
+If you don’t care:
+
+```bash
+git reset --hard
+git pull
+```
+
+---
+
+## ⚠️ 8. **Undo a Pushed Commit**
+
+### 🧠 Danger Zone: Undo already pushed commits
+
+```bash
+git reset --hard HEAD~1
+git push --force-with-lease
+```
+
+> ⚠️ Only do this on **your own branch**, never shared branches like `main`.
+
+---
+
+## ⚠️ 9. **Delete a Remote Branch**
+
+```bash
+git push origin --delete old-feature
+```
+
+---
+
+## ⚠️ 10. **Clean Untracked Files and Directories**
+
+```bash
+git clean -fd
+```
+
+Use with caution:
+
+* `-f`: force
+* `-d`: remove directories too
+
+---
+
+# 🧪 Bonus: Try This Practice Setup
+
+```bash
+git checkout -b clean-up-test
+echo "temp" > temp.txt
+git add .
+git commit -m "temp file"
+git reset --soft HEAD~1
+# Edit file again
+git reset --hard
+```
+
+Then stash, conflict, rebase, reset, etc.
+
+---
+
+
