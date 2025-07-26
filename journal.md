@@ -1,1 +1,2 @@
 - Day 1: Git intro
+- Day 2: Learned about rebasing
